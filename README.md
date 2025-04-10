@@ -9,11 +9,29 @@ Jodo是一个使用Rust开发的命令行Todo应用程序，可以帮助你在�
 - 标记重要任务并置顶显示
 - 已完成任务自动归类
 - 支持查看任务详细信息
-- 任务ID保持固定，不会因删除而改变顺序
 
 ## 安装
 
-### 在Debian 12上安装
+### 直接从GitHub安装
+
+```bash
+# 克隆仓库
+git clone https://github.com/JoyinJoester/JODO.git
+cd JODO
+
+# 编译并安装
+cargo build --release
+sudo cp ./target/release/jodo /usr/local/bin/
+sudo chmod +x /usr/local/bin/jodo
+```
+
+### 使用Cargo直接从GitHub安装
+
+```bash
+cargo install --git https://github.com/JoyinJoester/JODO.git
+```
+
+### 在Linux上安装
 
 1. 首先构建发行版:
 
@@ -146,6 +164,3 @@ jodo -u 1c
 jodo -d 1
 ```
 
-## 许可证
-
-MIT
