@@ -172,6 +172,22 @@ fn truncate_str(s: &str, max_width: usize) -> String {
     }
 }
 
+// 计算字符串的显示宽度，考虑中文字符占两个宽度
+fn display_width(s: &str) -> usize {
+    s.chars().map(|c| if c.is_ascii() { 1 } else { 2 }).sum()
+}
+
+// 创建固定显示宽度的字符串
+fn fixed_width_string(s: &str, width: usize) -> String {
+    let actual_width = display_width(s);
+    if actual_width >= width {
+        s.to_string()
+    } else {
+        // 添加空格以达到固定宽度
+        format!("{}{}", s, " ".repeat(width - actual_width))
+    }
+}
+
 impl TodoList {
     fn new() -> Result<Self, io::Error> {
         let mut file_path = dirs::home_dir().unwrap_or_default();
@@ -268,12 +284,13 @@ impl TodoList {
                 // 根据可用空间计算描述的最大长度，考虑中文字符
                 let max_desc_width = 36; // 留4个字符的余量
                 let truncated_desc = truncate_str(&task.description, max_desc_width);
+                let formatted_desc = fixed_width_string(&truncated_desc, 40);
 
                 println!(
-                    "{}{:<5} {:<40} {:<15}",
+                    "{}{:<5} {} {:<15}",
                     star_marker,
                     task.id.to_string().blue(),
-                    truncated_desc,
+                    formatted_desc,
                     due_date
                 );
             }
@@ -297,11 +314,12 @@ impl TodoList {
                 // 对已完成任务也处理中文显示问题
                 let max_desc_width = 36;
                 let truncated_desc = truncate_str(&task.description, max_desc_width);
+                let formatted_desc = fixed_width_string(&truncated_desc, 40);
                 
                 println!(
-                    "{:<5} {:<40} {:<15}",
+                    "{:<5} {} {:<15}",
                     task_id.green(),
-                    truncated_desc,
+                    formatted_desc,
                     due_date
                 );
             }
