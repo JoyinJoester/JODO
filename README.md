@@ -1,6 +1,7 @@
 # Jodo - 简单的命令行Todo应用
 
 Jodo是一个使用Rust开发的命令行Todo应用程序，可以帮助你在终端中管理任务。
+[English](./README_EN.md) | [日本語](./README_JA.md) | 简体中文
 
 ## 功能亮点
 
@@ -9,6 +10,7 @@ Jodo是一个使用Rust开发的命令行Todo应用程序，可以帮助你在�
 - 标记重要任务并置顶显示
 - 已完成任务自动归类
 - 支持查看任务详细信息
+- 支持一次性删除多个任务
 
 ## 安装
 
@@ -91,7 +93,8 @@ jodo                           # 同上，列出所有任务
 ```bash
 jodo -e, --edit <id> --content "内容"   # 编辑任务内容
 jodo -e, --edit <id> -t, --time 日期    # 编辑任务截止日期
-jodo -d, --delete <id>                 # 删除任务
+jodo -d, --delete <id>                 # 删除单个任务
+jodo -d, --delete <id1> <id2> <id3>    # 同时删除多个任务
 jodo -c, --complete <id>               # 标记任务为已完成
 jodo -u, --undo <id>                   # 取消任务完成标记
 jodo --star <id>                       # 标记任务为重要（置顶）
@@ -118,13 +121,14 @@ jodo show <id>             # 显示任务的详细信息
 ```bash
 jodo -h, --help            # 显示帮助信息
 jodo -v, --version         # 显示版本信息
+jodo -L, --language <lang> # 设置语言 (zh-cn/en/ja)
 ```
 
 ### 注意事项
 
 - 已完成的任务ID会在末尾显示'c'，例如 `1c`
 - 星标任务会在列表中置顶显示
-- 任务ID在删除后不会改变，保持唯一性
+- 任务ID在修改或删除后会自动重新分配，保持连续性
 
 ## 文件存储
 
@@ -160,7 +164,13 @@ jodo -c 1
 # 取消任务完成标记
 jodo -u 1c
 
-# 删除任务
+# 删除单个任务
 jodo -d 1
+
+# 删除多个任务
+jodo -d 1 3 5
+
+# 切换到英文界面
+jodo -L en
 ```
 
