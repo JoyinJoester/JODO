@@ -1,6 +1,7 @@
 # Jodo - Simple Command Line Todo Application
 
 Jodo is a command line Todo application developed using Rust, helping you manage tasks in your terminal.
+
 [English](./README_EN.md) | [日本語](./README_JA.md) | [简体中文](./README.md)
 
 ## Key Features
