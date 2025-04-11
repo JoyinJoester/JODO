@@ -1,6 +1,7 @@
 # Jodo - 简单的命令行Todo应用
 
 Jodo是一个使用Rust开发的命令行Todo应用程序，可以帮助你在终端中管理任务。
+
 [English](./README_EN.md) | [日本語](./README_JA.md) | 简体中文
 
 ## 功能亮点
