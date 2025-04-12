@@ -1,24 +1,22 @@
-# Jodo - Simple Command Line Todo Application
+# JODO - Simple Command-Line Todo Application
 
-Jodo is a command line Todo application developed using Rust, helping you manage tasks in your terminal.
+JODO is a lightweight command-line Todo application that helps you efficiently manage your daily tasks.
 
-[English](./README_EN.md) | [日本語](./README_JA.md) | [简体中文](./README.md)
+## Features
 
-## Key Features
-
-- Manage to-do lists, supporting adding, editing, deleting, and marking completion status
-- Set deadlines for tasks
-- Mark important tasks and display them at the top
-- Automatically categorize completed tasks
-- View detailed task information
-- Support for deleting multiple tasks at once
+- Clean command-line interface
+- Task due date support
+- Important task marking
+- Colorful due date display (overdue, urgent, upcoming)
+- Batch task addition and operations
+- Multi-language support (Chinese, English, Japanese)
 
 ## Installation
 
 ### Direct Installation from GitHub
 
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/JoyinJoester/JODO.git
 cd JODO
 
@@ -28,51 +26,51 @@ sudo cp ./target/release/jodo /usr/local/bin/
 sudo chmod +x /usr/local/bin/jodo
 ```
 
-### Install Directly from GitHub Using Cargo
+### Install from GitHub using Cargo
 
 ```bash
 cargo install --git https://github.com/JoyinJoester/JODO.git
 ```
 
-### Installation on Linux
+### Install on Linux
 
-1. First build the release:
+1. First, build the release:
 
 ```bash
 cargo build --release
 ```
 
-2. Then run the provided installation script:
+2. Run the provided installation script:
 
 ```bash
 sudo chmod +x ./debian_install.sh
 sudo ./debian_install.sh
 ```
 
-This script will copy the compiled binary to the `/usr/local/bin` directory and optionally configure the PATH environment variable.
+This script will copy the compiled binary to the `/usr/local/bin` directory and optionally set the PATH environment variable.
 
 3. Manual installation method:
 
-If you don't want to use the installation script, you can install manually:
+If you prefer not to use the installation script, you can install manually:
 
 ```bash
 sudo cp ./target/release/jodo /usr/local/bin/
 sudo chmod +x /usr/local/bin/jodo
 ```
 
-4. Verify installation:
+4. Verify the installation:
 
-After installation, you can open a new terminal and type:
+After installation, open a new terminal and type:
 
 ```bash
 jodo --version
 ```
 
-If version information is displayed, the installation is successful.
+If version information is displayed, the installation was successful.
 
-### Install Using Cargo
+### Install using Cargo
 
-If you have Rust and Cargo installed, you can also use the following command to install:
+If you already have Rust and Cargo installed, you can also install using:
 
 ```bash
 cargo install --path .
@@ -83,94 +81,83 @@ cargo install --path .
 ### Basic Operations
 
 ```bash
-jodo "Complete project report"         # Add new task
-jodo "Complete project report" -t 2023-12-31 # Add task with deadline
-jodo -l, --list                       # List all tasks
-jodo                                  # Same as above, list all tasks
+# Add a new task
+jodo "Complete project report"
+
+# Add a task with a due date
+jodo "Complete project report" -t 2023-12-31
+
+# List all tasks
+jodo -l
+jodo
 ```
 
-### Task Management Commands
+### Task Management
 
 ```bash
-jodo -e, --edit <id> --content "content"   # Edit task content
-jodo -e, --edit <id> -t, --time date       # Edit task deadline
-jodo -d, --delete <id>                     # Delete single task
-jodo -d, --delete <id1> <id2> <id3>        # Delete multiple tasks at once
-jodo -c, --complete <id>                   # Mark task as completed
-jodo -u, --undo <id>                       # Unmark task as completed
-jodo --star <id>                           # Mark task as important (pin to top)
-jodo --unstar <id>                         # Remove important mark
-jodo --show <id>                           # Show detailed task information
+# Edit task content
+jodo -e 1 "Updated task content"
+
+# Change task due date
+jodo -e 1 -t 2023-12-25
+jodo -t 1 2023-12-25  # Shortcut
+
+# Mark task as completed
+jodo -c 1
+jodo -c 1 2 3  # Complete multiple tasks at once
+
+# Mark task as incomplete
+jodo -u 1
+
+# Mark task as important
+jodo --star 1
+
+# Remove important mark from task
+jodo --unstar 1
+
+# Delete task
+jodo -d 1
+jodo -d 1 2 3  # Delete multiple tasks at once
+
+# View task details
+jodo --show 1
 ```
 
-### Subcommand Form
+### Batch Mode
 
 ```bash
-jodo list                  # List all tasks
-jodo done <id>             # Mark task as completed
-jodo undo <id>             # Unmark task as completed
-jodo remove <id>           # Delete task
-jodo edit <id> "content"   # Edit task content
-jodo edit <id> -t date     # Edit task deadline
-jodo star <id>             # Mark task as important
-jodo unstar <id>           # Remove important mark
-jodo show <id>             # Show detailed task information
+# Enter batch mode
+jodo -m
+
+# Example session:
+jodo$> Complete first task
+jodo$> Complete second task
+jodo$> Learn Rust programming
+jodo$> exit  # Exit batch mode
 ```
 
 ### Other Options
 
 ```bash
-jodo -h, --help            # Display help information
-jodo -v, --version         # Display version information
-jodo -L, --language <lang> # Set language (zh-cn/en/ja)
+# Display help information
+jodo -h
+
+# Display version information
+jodo -v
+
+# Change language
+jodo -L en  # English
+jodo -L zh-cn  # Chinese
+jodo -L ja  # Japanese
 ```
 
-### Notes
+## Due Date Color Legend
 
-- Completed tasks have a 'c' suffix after their ID, e.g. `1c`
-- Starred tasks are displayed at the top of the list
-- Task IDs are automatically reassigned after modification or deletion to maintain continuity
+- **Bold Red**: Overdue
+- **Bright Red**: Due today (urgent)
+- **Yellow**: Due within 3 days (soon)
+- **Normal color**: Other dates
 
-## File Storage
+## License
 
-Task data is stored in the `~/.jodo/tasks.json` file. Changes are automatically saved after each operation.
-
-## Examples
-
-```bash
-# Add a new task
-jodo "Complete project report"
-
-# Add a task with deadline
-jodo "Complete project report" -t 2023-12-31
-
-# View all tasks
-jodo -l
-
-# Edit task content
-jodo -e 1 --content "Modified content"
-
-# Set task deadline
-jodo -e 1 -t 2023-12-31
-
-# Mark task as important
-jodo --star 1
-
-# View task details
-jodo --show 1
-
-# Mark task as completed
-jodo -c 1
-
-# Unmark task as completed
-jodo -u 1c
-
-# Delete single task
-jodo -d 1
-
-# Delete multiple tasks
-jodo -d 1 3 5
-
-# Switch to Chinese interface
-jodo -L zh-cn
-```
+[MIT License](LICENSE)
