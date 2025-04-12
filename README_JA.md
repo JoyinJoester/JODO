@@ -148,6 +148,14 @@ jodo -L, --language <lang> # 言語を設定 (zh-cn/en/ja)
 - 重要markされたtaskはlistのtopに表示されます
 - Task IDは変更や削除後に自動的に再割り当てされ、連続性を維持します
 
+## Data Files
+
+Jodoは以下の場所にすべてのdata fileを保存します：
+
+- Task data： `~/.jodo/tasks.json`
+
+各操作後、dataは自動的にこのfileに保存されます。dataをbackupするには、このfileをコピーするだけです。
+
 ## File保存
 
 Task dataは `~/.jodo/tasks.json` fileに保存されます。各操作後に変更は自動的に保存されます。
@@ -196,4 +204,3 @@ jodo -d 1 3 5
 
 # 中国語interfaceに切り替え
 jodo -L zh-cn
-```
