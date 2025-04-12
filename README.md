@@ -2,7 +2,7 @@
 
 JODO 是一个轻量级命令行 Todo 应用程序，帮助您高效管理日常任务。
 
-[中文版](../README.md)|[日本語](../README_JA.md)|[English](../README_EN.md)|
+[中文版](./README.md)|[日本語](./README_JA.md)|[English](./README_EN.md)|
 
 ## 特性
 
