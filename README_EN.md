@@ -167,7 +167,3 @@ JODO stores all task data in the following location:
 - Task data: `~/.jodo/tasks.json`
 
 Data is automatically saved to this file after each task operation. To backup your data, simply copy this file.
-
-## License
-
-[MIT License](LICENSE)
