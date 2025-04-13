@@ -594,6 +594,15 @@ impl Translations {
             Language::Chinese => "已修改的任务内容",
         }.to_string()
     }
+
+    // 添加语言切换成功的翻译方法
+    fn language_changed(&self, lang_name: &str) -> String {
+        match self.lang {
+            Language::English => format!("Language switched to {}", lang_name),
+            Language::Japanese => format!("言語が{}に切り替えられました", lang_name),
+            Language::Chinese => format!("语言已切换为{}", lang_name),
+        }
+    }
 }
 
 // 添加配置结构体
@@ -1392,11 +1401,19 @@ fn main() {
     }
     
     // 特殊处理语言切换: 检查是否只有语言切换参数
-    // 如果是，则更新配置并立即退出
+    // 如果是，则更新配置并显示成功消息
     let args: Vec<String> = std::env::args().collect();
     if args.len() == 3 && (args[1] == "-L" || args[1] == "--language") {
         let lang_str = &args[2];
         let new_language = Language::from_str(lang_str);
+        
+        // 获取语言名称，用于显示切换提示
+        let lang_display_name = match new_language {
+            Language::English => "English",
+            Language::Japanese => "日本語",
+            Language::Chinese => "中文",
+        };
+        
         unsafe {
             CURRENT_LANGUAGE = new_language;
         }
@@ -1405,8 +1422,10 @@ fn main() {
             let t = get_translations();
             eprintln!("{}", t.error(&format!("无法保存语言设置: {}", e)));
         }
-        // 语言切换后立即显示帮助
-        show_help();
+        
+        // 只显示语言切换成功的消息，不显示帮助
+        let t = get_translations();
+        println!("{}", t.language_changed(lang_display_name));
         return;
     }
     

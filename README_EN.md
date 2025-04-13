@@ -1,7 +1,5 @@
 # JODO - Simple Command-Line Todo Application
 
-English|[简体中文](./README.md)|[日本語](./README_JA.md)
-
 JODO is a lightweight command-line Todo application that helps you efficiently manage your daily tasks.
 
 ## Features
@@ -77,6 +75,33 @@ If you already have Rust and Cargo installed, you can also install using:
 ```bash
 cargo install --path .
 ```
+
+### Troubleshooting
+
+#### Cargo.lock Version Compatibility Issue
+
+If you encounter errors related to the `Cargo.lock` file when compiling on different devices, this may be due to format version incompatibility. In this project, `Cargo.lock` uses version 4 format (line 3 of the file shows `version = 4`), but some older versions of Rust or Cargo may only support version 3.
+
+**Solutions**:
+
+1. Modify the Cargo.lock file:
+   ```bash
+   # Change "version = 4" to "version = 3" in the Cargo.lock file
+   sed -i 's/version = 4/version = 3/' Cargo.lock
+   ```
+
+2. Or update your Rust toolchain:
+   ```bash
+   rustup update
+   ```
+
+3. Alternatively, regenerate the Cargo.lock completely:
+   ```bash
+   rm Cargo.lock
+   cargo build
+   ```
+
+Note: Cargo.lock version 4 was introduced in Rust 1.62.0, so you may encounter compatibility issues if you're using an older Rust version.
 
 ## Usage
 
@@ -167,3 +192,7 @@ JODO stores all task data in the following location:
 - Task data: `~/.jodo/tasks.json`
 
 Data is automatically saved to this file after each task operation. To backup your data, simply copy this file.
+
+## License
+
+[MIT License](LICENSE)

@@ -78,6 +78,33 @@ RustとCargoがすでにinstallされている場合は、次のcommandを使っ
 cargo install --path .
 ```
 
+### トラブルシューティング
+
+#### Cargo.lock バージョン互換性問題
+
+異なるデバイスでコンパイルする際に `Cargo.lock` ファイルに関連するエラーが発生した場合、これはフォーマットバージョンの非互換性によるものかもしれません。このプロジェクトでは、`Cargo.lock` はバージョン4形式を使用しています（ファイルの3行目に `version = 4` と表示されています）が、古いバージョンのRustやCargoではバージョン3のみをサポートしている場合があります。
+
+**解決方法**:
+
+1. Cargo.lockファイルを修正する:
+   ```bash
+   # Cargo.lockファイル内の "version = 4" を "version = 3" に変更する
+   sed -i 's/version = 4/version = 3/' Cargo.lock
+   ```
+
+2. Rustツールチェーンを更新する:
+   ```bash
+   rustup update
+   ```
+
+3. Cargo.lockを完全に再生成する:
+   ```bash
+   rm Cargo.lock
+   cargo build
+   ```
+
+注意：Cargo.lockバージョン4はRust 1.62.0で導入されました。古いバージョンのRustを使用している場合は、互換性の問題が発生する可能性があります。
+
 ## 使用方法
 
 ### 基本操作

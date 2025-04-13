@@ -2,8 +2,6 @@
 
 JODO 是一个轻量级命令行 Todo 应用程序，帮助您高效管理日常任务。
 
-简体中文|[日本語](./README_JA.md)|[English](./README_EN.md)
-
 ## 特性
 
 - 简洁的命令行界面
@@ -77,6 +75,33 @@ jodo --version
 ```bash
 cargo install --path .
 ```
+
+### 可能遇到的问题
+
+#### Cargo.lock 版本兼容性问题
+
+如果您在其他设备上编译时遇到与 `Cargo.lock` 文件相关的错误，这可能是因为 `Cargo.lock` 文件中的格式版本不兼容。在本项目中，`Cargo.lock` 使用了版本 4 格式（文件的第 3 行显示 `version = 4`），但某些旧版本的 Rust 或 Cargo 可能只支持版本 3。
+
+**解决方法**:
+
+1. 修改 Cargo.lock 文件:
+   ```bash
+   # 将 Cargo.lock 文件中的 "version = 4" 改为 "version = 3"
+   sed -i 's/version = 4/version = 3/' Cargo.lock
+   ```
+
+2. 或者更新您的 Rust 工具链:
+   ```bash
+   rustup update
+   ```
+
+3. 也可以完全重新生成 Cargo.lock:
+   ```bash
+   rm Cargo.lock
+   cargo build
+   ```
+
+注意：Cargo.lock 版本 4 是在 Rust 1.62.0 中引入的，如果您使用的是较旧的 Rust 版本，将会遇到兼容性问题。
 
 ## 使用方法
 
