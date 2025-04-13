@@ -577,6 +577,23 @@ impl Translations {
             Language::Chinese => format!("任务 {} 已删除", id_list),
         }
     }
+
+    // 添加示例文本的翻译
+    fn example_task(&self) -> String {
+        match self.lang {
+            Language::English => "Complete project report",
+            Language::Japanese => "プロジェクトレポートを完成させる",
+            Language::Chinese => "完成项目报告",
+        }.to_string()
+    }
+
+    fn example_edit_task(&self) -> String {
+        match self.lang {
+            Language::English => "Updated task content",
+            Language::Japanese => "更新されたタスク内容",
+            Language::Chinese => "已修改的任务内容",
+        }.to_string()
+    }
 }
 
 // 添加配置结构体
@@ -677,11 +694,11 @@ struct Cli {
     /// 设置任务截止日期 (格式: YYYY-MM-DD)
     #[clap(short = 't', long = "time")]
     due_date: Option<String>,
-    
+
     /// 设置语言 (zh-cn: 中文, en: 英文, ja: 日语)
     #[clap(short = 'L', long = "language")]
     language: Option<String>,
-    
+
     /// 显示详细的帮助信息
     #[clap(short = 'h', long = "help", conflicts_with = "task")]
     help: bool,
@@ -689,39 +706,39 @@ struct Cli {
     /// 显示版本信息
     #[clap(short = 'v', long = "version")]
     version: bool,
-    
+
     /// 编辑任务内容
     #[clap(short = 'e', long = "edit", value_name = "ID")]
     edit_id: Option<String>,
-    
+
     /// 编辑任务时的新内容 (可以直接作为命令行参数)
     #[clap(value_name = "CONTENT")]
     edit_content_arg: Option<String>,
-    
+
     /// 编辑任务时的新内容 (通过--content参数)
     #[clap(long = "content", requires = "edit_id")]
     edit_content: Option<String>,
-    
+
     /// 标记任务为完成
     #[clap(short = 'c', long = "complete", num_args = 1.., value_name = "ID", conflicts_with_all = &["edit_id", "task"])]
     complete_ids: Vec<String>,
-    
+
     /// 标记任务为未完成
     #[clap(short = 'u', long = "undo", value_name = "ID", conflicts_with_all = &["complete_id", "edit_id", "task"])]
     undo_id: Option<String>,
-    
+
     /// 将任务标记为重要（置顶）
     #[clap(long = "star", value_name = "ID", conflicts_with_all = &["complete_id", "undo_id", "edit_id", "task"])]
     star_id: Option<String>,
-    
+
     /// 取消任务的重要标记
     #[clap(long = "unstar", value_name = "ID", conflicts_with_all = &["star_id", "complete_id", "undo_id", "edit_id", "task"])]
     unstar_id: Option<String>,
-    
+
     /// 删除任务 (可多个ID，空格分隔)
     #[clap(short = 'd', long = "delete", num_args = 1.., value_name = "ID", conflicts_with_all = &["edit_id", "complete_id", "undo_id", "star_id", "unstar_id", "task"])]
     delete_ids: Vec<String>,
-    
+
     /// 列出所有任务
     #[clap(short = 'l', long = "list", conflicts_with_all = &["edit_id", "complete_id", "delete_ids", "task"])]
     list: bool,
@@ -783,6 +800,8 @@ enum Commands {
         /// 任务ID
         id: String,
     },
+    /// 显示帮助信息
+    Help,
 }
 
 // 修改Task结构体，移除group字段
@@ -797,54 +816,55 @@ struct Task {
     deleted: bool,    
 }
 
-#[derive(Debug)]
+// 添加配置结构体
+#[derive(Debug, Serialize, Deserialize)]
 struct TodoList {
     tasks: Vec<Task>,
-    file_path: PathBuf,
-    next_id: usize,  
+    file_path: PathBuf,   
+    next_id: usize,      
 }
 
 // 辅助函数：解析任务ID（支持后缀'c'表示已完成任务）
 fn parse_task_id(id_str: &str) -> (usize, bool) {
     if id_str.ends_with('c') {
         if let Ok(id) = id_str[0..id_str.len()-1].parse::<usize>() {
-            return (id, true); // 返回ID和"是否完成"标志
+            return (id, true); // 返回ID和"是否完成"标志       
         }
     }
-    
+
     if let Ok(id) = id_str.parse::<usize>() {
-        return (id, false);
+        return (id, false);        
     }
-    
-    (0, false) // 解析失败
+
+    (0, false) // 解析失败    
 }
 
 // 截断字符串，同时考虑显示宽度
 fn truncate_str(s: &str, max_width: usize) -> String {
     let mut width = 0;
     let mut end_idx = 0;
-    
+        
     for (idx, c) in s.char_indices() {
         let char_width = if c.is_ascii() { 1 } else { 2 };
         
         if width + char_width > max_width {
-            break;
+            break;    
         }
         
-        width += char_width;
+        width += char_width;   
         end_idx = idx + c.len_utf8();
     }
-    
+        
     if end_idx < s.len() {
         format!("{}...", &s[..end_idx])
-    } else {
-        s.to_string()
-    }
+    } else { 
+        s.to_string()       
+    }    
 }
 
 // 计算字符串的显示宽度，考虑中文字符占两个宽度
 fn display_width(s: &str) -> usize {
-    s.chars().map(|c| if c.is_ascii() { 1 } else { 2 }).sum()
+    s.chars().map(|c| if c.is_ascii() { 1 } else { 2 }).sum()    
 }
 
 // 创建固定显示宽度的字符串
@@ -853,18 +873,18 @@ fn fixed_width_string(s: &str, width: usize) -> String {
     if actual_width >= width {
         s.to_string()
     } else {
-        // 添加空格以达到固定宽度
-        format!("{}{}", s, " ".repeat(width - actual_width))
-    }
+        // 添加空格以达到固定宽度   
+        format!("{}{}", s, " ".repeat(width - actual_width))       
+    }    
 }
 
 // 截止日期临近程度的枚举
 enum DueStatus {
     Overdue,    // 已过期
-    Urgent,     // 紧急 (1天内)
+    Urgent,     // 紧急 (1天内) 
     Soon,       // 即将到期 (3天内)
-    Normal,     // 正常
-    NoDue,      // 无截止日期
+    Normal,     // 正常   
+    NoDue,      // 无截止日期    
 }
 
 // 判断截止日期的临近程度
@@ -879,12 +899,12 @@ fn get_due_status(due_date: Option<&DateTime<Local>>) -> DueStatus {
             DueStatus::Urgent
         } else if days_remaining <= 3 {
             DueStatus::Soon
-        } else {
+        } else { 
             DueStatus::Normal
         }
-    } else {
-        DueStatus::NoDue
-    }
+    } else { 
+        DueStatus::NoDue       
+    }    
 }
 
 // 根据截止日期状态返回颜色化的日期字符串
@@ -896,12 +916,12 @@ fn format_due_date(date: Option<&DateTime<Local>>, t: &Translations) -> ColoredS
                 DueStatus::Overdue => formatted.red().bold(),
                 DueStatus::Urgent => formatted.bright_red(),
                 DueStatus::Soon => formatted.yellow(),
-                DueStatus::Normal => formatted.normal(),
-                DueStatus::NoDue => t.none().normal(),
+                DueStatus::Normal => formatted.normal(),   
+                DueStatus::NoDue => t.none().normal(),      
             }
-        },
-        None => t.none().normal()
-    }
+        },   
+        None => t.none().normal()       
+    }    
 }
 
 impl TodoList {
@@ -909,129 +929,128 @@ impl TodoList {
         let mut file_path = dirs::home_dir().unwrap_or_default();
         file_path.push(".jodo");
         file_path.push("tasks.json");
-
+        
         // 确保目录存在
         if let Some(parent) = file_path.parent() {
-            fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent)?;    
         }
-
+        
         let tasks: Vec<Task> = if file_path.exists() {
             let mut file = File::open(&file_path)?;
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
             serde_json::from_str(&contents).unwrap_or_default()
         } else {
-            Vec::new()
+            Vec::new()        
         };
-
+    
         // 创建TodoList实例
         let mut todo_list = Self { 
             tasks,
-            file_path,
-            next_id: 1,  // 临时值，会在reassign_ids中更新
+            file_path,  
+            next_id: 1,  // 临时值，会在reassign_ids中更新        
         };
-        
+    
         // 程序启动时就重新分配ID，确保任务总是从1开始连续编号
-        todo_list.reassign_ids();
-        todo_list.save()?;
-        
-        Ok(todo_list)
+        todo_list.reassign_ids();    
+        todo_list.save()?; 
+    
+        Ok(todo_list)        
     }
 
     // 修改add_task方法，移除group参数
     fn add_task(&mut self, description: String, due_date: Option<DateTime<Local>>) -> Result<(), io::Error> {
         let task = Task {
-            id: self.next_id, // 临时ID
+            id: self.next_id, // 临时ID 
             description,
             completed: false,
             created_at: Local::now(),
             due_date,
-            starred: false,
-            deleted: false,
+            starred: false,  
+            deleted: false,        
         };
-
+    
         self.tasks.push(task);
-        self.reassign_ids(); // 重新分配所有ID
-        self.save()
+        self.reassign_ids(); // 重新分配所有ID   
+        self.save()        
     }
 
     // 列出任务，移除group参数
     fn list_tasks(&self) {
         let t = get_translations();
-        
-        // 过滤出未删除的任务
+    
+        // 过滤出未删除的任务    
         let filtered_tasks: Vec<&Task> = self.tasks.iter().filter(|task| !task.deleted).collect();
-            
+    
         if filtered_tasks.is_empty() {
-            println!("{}", t.no_tasks());
-            return;
+            println!("{}", t.no_tasks());   
+            return;        
         }
-
+    
         // 按照完成状态、星标和ID排序
         let mut incomplete_tasks: Vec<&Task> = filtered_tasks.iter()
-            .filter(|t| !t.completed)
-            .cloned()
+            .filter(|t| !t.completed) 
+            .cloned()        
             .collect();
-            
+    
         let mut completed_tasks: Vec<&Task> = filtered_tasks.iter()
-            .filter(|t| t.completed)
-            .cloned()
+            .filter(|t| t.completed) 
+            .cloned()        
             .collect();
-            
+    
         // 修改排序逻辑：首先按照星标排序，然后严格按照ID数值排序
         incomplete_tasks.sort_by(|a, b| {
             match (a.starred, b.starred) {
                 (true, false) => Ordering::Less,
-                (false, true) => Ordering::Greater,
-                _ => a.id.cmp(&b.id)  // 按ID升序排序
-            }
+                (false, true) => Ordering::Greater,   
+                _ => a.id.cmp(&b.id)  // 按ID升序排序     
+            }        
         });
-        
-        // 已完成任务严格按ID排序
+    
+        // 已完成任务严格按ID排序    
         completed_tasks.sort_by_key(|t| t.id);
-        
+    
         println!("{}",t.incomplete_tasks());
         if incomplete_tasks.is_empty() {
             println!("  {}", t.none().italic());
         } else {
-            println!("{:<5} {:<40} {:<15}", t.id(), t.description(), t.due_date());
+            println!("{:<5} {:<40} {:<15}", t.id(), t.description(), t.due_date());        
             println!("{}", "-".repeat(70));
-
+    
             for task in &incomplete_tasks {
                 let star_marker = if task.starred { "★ ".yellow() } else { "  ".into() };
-
                 // 使用新的格式化函数显示彩色的截止日期
                 let due_date = format_due_date(task.due_date.as_ref(), &t);
                 
                 // 根据可用空间计算描述的最大长度，考虑中文字符
                 let max_desc_width = 36; // 留4个字符的余量
-                let truncated_desc = truncate_str(&task.description, max_desc_width);
+                let truncated_desc = truncate_str(&task.description, max_desc_width);            
                 let formatted_desc = fixed_width_string(&truncated_desc, 40);
-
+    
                 println!(
                     "{}{:<5} {} {:<15}",
                     star_marker,
                     task.id.to_string().blue(),
-                    formatted_desc,
-                    due_date
-                );
-            }
+                    formatted_desc,  
+                    due_date       
+                );       
+            }        
         }
-        
+    
         println!("\n{}",t.completed_tasks());
         if completed_tasks.is_empty() {
             println!("  {}", t.none().italic());
         } else {
-            println!("{:<5} {:<40} {:<15}", t.id(), t.description(), t.due_date());
+            println!("{:<5} {:<40} {:<15}", t.id(), t.description(), t.due_date());        
             println!("{}", "-".repeat(70));
-
+    
             for task in completed_tasks.iter() {
                 let task_id = format!("{}c", task.id);
                 
                 // 已完成任务的截止日期不需要特殊颜色标记
                 let due_date = match task.due_date {
-                    Some(date) => date.format("%Y-%m-%d").to_string().normal(),
-                    None => t.none().normal(),
+                    Some(date) => date.format("%Y-%m-%d").to_string().normal(),  
+                    None => t.none().normal(),    
                 };
                 
                 // 对已完成任务也处理中文显示问题
@@ -1042,34 +1061,34 @@ impl TodoList {
                 println!(
                     "{:<5} {} {:<15}",
                     task_id.green(),
-                    formatted_desc,
-                    due_date
-                );
-            }
-        }
+                    formatted_desc,  
+                    due_date       
+                );       
+            }       
+        }        
     }
 
     // 修改edit_task方法，移除group参数
     fn edit_task(&mut self, id_str: &str, new_desc: Option<&str>, due_date: Option<DateTime<Local>>) -> Result<(), &'static str> {
         let (id, is_completed) = parse_task_id(id_str);
-        
+    
         if let Some(task) = self.tasks.iter_mut()
-            .filter(|t| !t.deleted && t.completed == is_completed && t.id == id)
+            .filter(|t| !t.deleted && t.completed == is_completed && t.id == id)        
             .next() {
-            
+    
             if let Some(desc) = new_desc {
-                task.description = desc.to_string();
+                task.description = desc.to_string();    
             }
             
             if due_date.is_some() {
-                task.due_date = due_date;
+                task.due_date = due_date;    
             }
             
             self.save().map_err(|_| "保存任务失败")?;
             Ok(())
-        } else {
-            Err("任务不存在")
-        }
+        } else { 
+            Err("任务不存在")       
+        }        
     }
 
     fn mark_done(&mut self, id_str: &str) -> Result<(), &'static str> {
@@ -1082,9 +1101,9 @@ impl TodoList {
             self.reassign_ids(); // 重新分配ID
             self.save().map_err(|_| t.save_failed())?;
             Ok(())
-        } else {
-            Err(t.task_already_completed())
-        }
+        } else { 
+            Err(t.task_already_completed())       
+        }    
     }
     
     fn mark_undone(&mut self, id_str: &str) -> Result<(), &'static str> {
@@ -1097,9 +1116,9 @@ impl TodoList {
             self.reassign_ids(); // 重新分配ID
             self.save().map_err(|_| t.save_failed())?;
             Ok(())
-        } else {
-            Err(t.task_not_completed())
-        }
+        } else { 
+            Err(t.task_not_completed())       
+        }    
     }
     
     fn star_task(&mut self, id_str: &str) -> Result<(), &'static str> {
@@ -1111,9 +1130,9 @@ impl TodoList {
             self.reassign_ids(); // 重新分配ID
             self.save().map_err(|_| "保存任务失败")?;
             Ok(())
-        } else {
-            Err("任务不存在")
-        }
+        } else { 
+            Err("任务不存在")       
+        }    
     }
     
     fn unstar_task(&mut self, id_str: &str) -> Result<(), &'static str> {
@@ -1125,20 +1144,20 @@ impl TodoList {
             self.reassign_ids(); // 重新分配ID
             self.save().map_err(|_| "保存任务失败")?;
             Ok(())
-        } else {
-            Err("任务不存在")
-        }
+        } else { 
+            Err("任务不存在")       
+        }    
     }
-
+    
     fn remove_tasks(&mut self, id_strs: &[String]) -> Result<Vec<usize>, &'static str> {
         // 首先将任务ID映射到内部任务索引，避免中途ID变化
-        let mut task_indices_to_delete: Vec<(usize, usize, bool)> = Vec::new();  // (内部索引, 显示ID, 是否完成)
-        let mut display_ids = Vec::new();  // 用于显示的任务ID
-        
+        let mut task_indices_to_delete: Vec<(usize, usize, bool)> = Vec::new();  // (内部索引, 显示ID, 是否完成)    
+        let mut display_ids = Vec::new();  // 用于显示的任务ID 
+    
         // 第一步：收集所有要删除的任务信息
-        for id_str in id_strs {
+        for id_str in id_strs {    
             let (display_id, is_completed) = parse_task_id(id_str);
-            
+    
             // 找到对应的任务在tasks数组中的实际索引位置
             if let Some((index, task)) = self.tasks.iter()
                 .enumerate()
@@ -1146,36 +1165,36 @@ impl TodoList {
                 
                 task_indices_to_delete.push((index, task.id, is_completed));
                 display_ids.push(task.id);
-            } else {
-                return Err("任务不存在");
-            }
+            } else { 
+                return Err("任务不存在");       
+            }        
         }
-        
+    
         // 第二步：按索引标记删除，避免重排序导致的问题
         for (index, _, _) in &task_indices_to_delete {
-            self.tasks[*index].deleted = true;
+            self.tasks[*index].deleted = true;        
         }
-        
-        // 保存更改
+    
+        // 保存更改    
         self.save().map_err(|_| "保存任务失败")?;
-        
+    
         // 重新分配ID
-        self.reassign_ids();
+        self.reassign_ids();    
         self.save().map_err(|_| "保存任务失败")?;
-        
-        Ok(display_ids)
+    
+        Ok(display_ids)    
     }
     
     // 修改原来的remove_task方法，使用新的批量删除方法
     fn remove_task(&mut self, id_str: &str) -> Result<(), &'static str> {
-        self.remove_tasks(&[id_str.to_string()])?;
-        Ok(())
+        self.remove_tasks(&[id_str.to_string()])?;   
+        Ok(())        
     }
 
     fn show_task_detail(&self, id_str: &str) -> Result<(), &'static str> {
-        let t = get_translations();
+        let t = get_translations();    
         let (id, is_completed) = parse_task_id(id_str);
-        
+    
         if let Some(task) = self.tasks.iter()
             .find(|t| !t.deleted && t.completed == is_completed && t.id == id) {
             
@@ -1197,181 +1216,172 @@ impl TodoList {
                 t.no()
             });
             println!("{:<10}: {}", t.created_at(), task.created_at.format("%Y-%m-%d %H:%M:%S"));
-            
+    
             // 在详细信息中也显示彩色截止日期
             let due_date_str = match &task.due_date {
                 Some(date) => {
                     if task.completed {
                         date.format("%Y-%m-%d").to_string().normal()
-                    } else {
-                        format_due_date(Some(date), &t)
+                    } else { 
+                        format_due_date(Some(date), &t)      
                     }
-                },
+                },  
                 None => t.none().normal(),
             };
             println!("{:<10}: {}", t.due_date(), due_date_str);
-            
             println!("{}", "-".repeat(50));
             println!("{:<10}: ", t.description());
             println!("{}", task.description);
             println!("{}", "=".repeat(50));
             
             Ok(())
-        } else {
-            Err(t.task_not_exist())
-        }
+        } else { 
+            Err(t.task_not_exist())       
+        }        
     }
 
     fn save(&self) -> Result<(), io::Error> {
         let contents = serde_json::to_string_pretty(&self.tasks)?;
         let mut file = File::create(&self.file_path)?;
-        file.write_all(contents.as_bytes())?;
-        Ok(())
+        file.write_all(contents.as_bytes())?;   
+        Ok(())        
     }
-    
+
     #[allow(dead_code)]
     fn get_task(&self, id_str: &str) -> Option<&Task> {
         let (id, is_completed) = parse_task_id(id_str);
-        
-        self.tasks.iter()
+    
+        self.tasks.iter()   
             .find(|t| !t.deleted && t.completed == is_completed && t.id == id)
     }
 
     // 重构ID分配逻辑，使用顺序ID而不是递增ID
     fn reassign_ids(&mut self) {
         let mut next_id = 1;
-        
+    
         // 先处理未完成的任务
         let mut incomplete_tasks: Vec<&mut Task> = self.tasks.iter_mut()
-            .filter(|task| !task.deleted && !task.completed)
+            .filter(|task| !task.deleted && !task.completed)        
             .collect();
-        
+    
         // 排序规则（星标优先，然后按原ID）
         incomplete_tasks.sort_by(|a, b| {
             match (a.starred, b.starred) {
                 (true, false) => Ordering::Less,
-                (false, true) => Ordering::Greater,
-                _ => a.id.cmp(&b.id)
-            }
+                (false, true) => Ordering::Greater,   
+                _ => a.id.cmp(&b.id)     
+            }        
         });
-        
-        // 重新分配ID
+    
         for task in incomplete_tasks {
-            task.id = next_id;
-            next_id += 1;
+            task.id = next_id;   
+            next_id += 1;        
         }
-        
+    
         // 再处理已完成的任务
         let mut completed_tasks: Vec<&mut Task> = self.tasks.iter_mut()
-            .filter(|task| !task.deleted && task.completed)
+            .filter(|task| !task.deleted && task.completed)        
             .collect();
-        
+    
         // 严格按照原ID排序
         completed_tasks.sort_by_key(|t| t.id);
-        
+                
         for task in completed_tasks {
-            task.id = next_id;
-            next_id += 1;
+            task.id = next_id;   
+            next_id += 1;        
         }
-        
-        // 更新下一个可用ID
-        self.next_id = next_id;
+    
+        // 更新下一个可用ID   
+        self.next_id = next_id;        
     }
 
     fn mark_done_multiple(&mut self, id_strs: &[String]) -> Result<Vec<String>, &'static str> {
-        let t = get_translations();
-        let mut completed_ids = Vec::new();
-        
-        for id_str in id_strs {
+        let t = get_translations();    
+        let mut completed_ids = Vec::new(); 
+    
+        for id_str in id_strs {    
             let (id, _) = parse_task_id(id_str);
-            
+    
             if let Some(task) = self.tasks.iter_mut()
                 .find(|t| !t.deleted && !t.completed && t.id == id) {
-                task.completed = true;
-                completed_ids.push(id_str.clone());
-            }
+                task.completed = true;   
+                completed_ids.push(id_str.clone());       
+            }        
         }
-        
+    
         if completed_ids.is_empty() {
             return Err(t.task_already_completed());
         }
-        
-        self.reassign_ids(); // 重新分配ID
+            
+        self.reassign_ids(); // 重新分配ID    
         self.save().map_err(|_| t.save_failed())?;
-        
-        Ok(completed_ids)
-    }
+    
+        Ok(completed_ids)       
+    }    
 }
 
 fn parse_date(date_str: &str) -> Result<DateTime<Local>, &'static str> {
     let t = get_translations();
-    
+        
     let naive_date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
         .map_err(|_| t.invalid_date_format())?;
     
     let naive_datetime = naive_date.and_hms_opt(23, 59, 59)
         .ok_or(t.invalid_datetime())?;
-    
-    Ok(DateTime::from_naive_utc_and_offset(naive_datetime, Local::now().offset().clone()))
+       
+    Ok(DateTime::from_naive_utc_and_offset(naive_datetime, Local::now().offset().clone()))    
 }
 
 fn show_help() {
     let t = get_translations();
     println!("{}", t.help_title());
     println!("{}", "=======================".bold());
-    
     // 基本视图概念说明
     println!("\n【{}】", t.views());
     println!("  jodo               {}", t.task_view());
-    
     // 基本用法
     println!("\n{}", t.basic_usage());
-    println!("  jodo \"任务内容\"              {}", t.add_task());
-    println!("  jodo \"任务内容\" -t 日期      {}", t.add_task_with_date());
-    println!("  jodo -l                    {}", t.list_tasks_cmd());
-    
+    println!("  jodo \"{}\"              {}", t.example_task(), t.add_task());
+    println!("  jodo \"{}\" -t 2023-12-31      {}", t.example_task(), t.add_task_with_date());
+    println!("  jodo -l                    {}", t.list_tasks_cmd()); 
     // 任务管理命令
     println!("\n{}", t.task_management());
-    println!("  jodo -e ID 新内容           {}", t.edit_task_content());
-    println!("  jodo -e ID -t 日期          {}", t.edit_task_due_date());
-    println!("  jodo -c ID                  {}", t.mark_task_completed());
-    println!("  jodo -u ID                  {}", t.mark_task_incomplete());
-    println!("  jodo --star ID              {}", t.star_task_cmd());
-    println!("  jodo --unstar ID            {}", t.unstar_task_cmd());
-    println!("  jodo -d ID                  {}", t.delete_task());
-    println!("  jodo --show ID              {}", t.show_task_details());
-    println!("  jodo -m                     {}", t.batch_mode());
-    
+    println!("  jodo -e 1 \"{}\"           {}", t.example_edit_task(), t.edit_task_content());
+    println!("  jodo -e 1 -t 2023-12-25          {}", t.edit_task_due_date());
+    println!("  jodo -c 1                  {}", t.mark_task_completed());
+    println!("  jodo -u 1                  {}", t.mark_task_incomplete());
+    println!("  jodo --star 1              {}", t.star_task_cmd());
+    println!("  jodo --unstar 1            {}", t.unstar_task_cmd());
+    println!("  jodo -d 1                  {}", t.delete_task());
+    println!("  jodo --show 1              {}", t.show_task_details());
+    println!("  jodo -m                     {}", t.batch_mode());    
     // 其他选项
     println!("\n{}", t.other_options());
-    println!("  jodo -L 语言代码             {}", t.set_language());
+    println!("  jodo -L <lang>             {}", t.set_language());
     println!("  jodo -h, --help              {}", t.show_help_info());
     println!("  jodo -v, --version           {}", t.show_version_info());
-    
     // 注意事项
     println!("\n{}", t.note_completed_tasks());
-    
     // 示例
     println!("\n{}", t.examples());
-    println!("  jodo \"完成项目报告\"");
-    println!("  jodo \"完成项目报告\" -t 2023-12-31");
-    println!("  jodo -e 1 \"已修改的任务内容\" -t 2023-12-25");
-
+    println!("  jodo \"{}\"", t.example_task());
+    println!("  jodo \"{}\" -t 2023-12-31", t.example_task()); 
+    println!("  jodo -e 1 \"{}\" -t 2023-12-25", t.example_edit_task()); 
     // 截止日期颜色图例
     println!("\n{}", t.due_status_legend());
     println!("  {} - {}", t.overdue().red().bold(), t.overdue());
-    println!("  {} - {}", t.urgent().bright_red(), t.urgent());
+    println!("  {} - {}", t.urgent().bright_red(), t.urgent());   
     println!("  {} - {}", t.soon().yellow(), t.soon());
 }
 
 fn show_version() {
     let t = get_translations();
     println!("{} {}", t.version_info(), env!("CARGO_PKG_VERSION"));
-    println!("{}", t.app_description());
-    println!("{}: {}", t.author(), env!("CARGO_PKG_AUTHORS"));
+    println!("{}", t.app_description());   
+    println!("{}: {}", t.author(), env!("CARGO_PKG_AUTHORS"));    
 }
 
-// 修改main函数，使用新的CLI构建方式
+// 修改main函数，更彻底地解决语言切换问题
 fn main() {
     // 首先加载配置
     let mut config = Config::load();
@@ -1380,32 +1390,37 @@ fn main() {
     unsafe {
         CURRENT_LANGUAGE = config.language;
     }
-
-    // 预处理，检查是否需要切换语言
-    for arg in std::env::args() {
-        if arg == "-L" || arg == "--language" {
-            if let Some(lang_arg) = std::env::args().skip_while(|a| a != &arg).nth(1) {
-                let new_language = Language::from_str(&lang_arg);
-                unsafe {
-                    CURRENT_LANGUAGE = new_language;
-                }
-                config.language = new_language;
-                if let Err(e) = config.save() {
-                    let t = get_translations();
-                    eprintln!("{}", t.error(&format!("无法保存语言设置: {}", e)));
-                }
-            }
-            break;
+    
+    // 特殊处理语言切换: 检查是否只有语言切换参数
+    // 如果是，则更新配置并立即退出
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() == 3 && (args[1] == "-L" || args[1] == "--language") {
+        let lang_str = &args[2];
+        let new_language = Language::from_str(lang_str);
+        unsafe {
+            CURRENT_LANGUAGE = new_language;
         }
+        config.language = new_language;
+        if let Err(e) = config.save() {
+            let t = get_translations();
+            eprintln!("{}", t.error(&format!("无法保存语言设置: {}", e)));
+        }
+        // 语言切换后立即显示帮助
+        show_help();
+        return;
     }
-
-    // 现在基于当前语言构建CLI参数解析器
-    let mut cli = build_cli();
+    
+    // 如果是help命令，直接显示帮助并退出
+    if args.len() == 2 && (args[1] == "help" || args[1] == "-h" || args[1] == "--help") {
+        show_help();
+        return;
+    }
     
     // 使用clap解析命令行参数
     let matches = Cli::parse();
     
     // 复制解析后的参数到我们的cli实例
+    let mut cli = build_cli();
     cli.task = matches.task;
     cli.due_date = matches.due_date;
     cli.language = matches.language;
@@ -1421,13 +1436,13 @@ fn main() {
     cli.delete_ids = matches.delete_ids;
     cli.list = matches.list;
     cli.show_id = matches.show_id;
-    cli.multi_mode = matches.multi_mode;
+    cli.multi_mode = matches.multi_mode;    
     cli.command = matches.command;
 
     let t = get_translations();
     
     // 处理帮助选项
-    if cli.help {
+    if cli.help || (cli.command.is_some() && matches!(cli.command.as_ref().unwrap(), Commands::Help)) {
         show_help();
         return;
     }
@@ -1438,7 +1453,7 @@ fn main() {
         return;
     }
     
-    // 更新语言设置
+    // 更新语言设置 (从命令行参数)
     if let Some(lang_str) = &cli.language {
         let new_language = Language::from_str(lang_str);
         unsafe {
@@ -1450,8 +1465,13 @@ fn main() {
         if let Err(e) = config.save() {
             eprintln!("{}", t.error(&format!("无法保存语言设置: {}", e)));
         }
+        
+        // 语言切换后立即显示帮助
+        show_help();
+        return;
     }
 
+    // 初始化TodoList实例
     let mut todo_list = match TodoList::new() {
         Ok(list) => list,
         Err(e) => {
@@ -1459,29 +1479,29 @@ fn main() {
             return;
         }
     };
-
+    
     // 处理添加新任务
     if let Some(task_str) = cli.task {
         let due_date = match &cli.due_date {
             Some(date_str) => match parse_date(date_str) {
                 Ok(date) => Some(date),
                 Err(e) => {
-                    eprintln!("{}", t.error(e));
-                    return;
+                    eprintln!("{}", t.error(e));   
+                    return;      
                 }
-            },
-            None => None,
+            },  
+            None => None,        
         };
-
+    
         if let Err(e) = todo_list.add_task(task_str.clone(), due_date) {
             eprintln!("{}", t.error(&e.to_string()));
         } else {
             println!("{}", t.task_added(&task_str));
             if due_date.is_some() {
-                println!("{}: {}", t.due_date(), cli.due_date.as_ref().unwrap());
+                println!("{}: {}", t.due_date(), cli.due_date.as_ref().unwrap());       
             }
-        }
-        return;
+        }   
+        return;        
     }
 
     // 处理编辑任务
@@ -1491,7 +1511,7 @@ fn main() {
         
         // 如果没有编辑内容且task存在，尝试使用task作为编辑内容
         if desc.is_none() && cli.task.is_some() {
-            desc = cli.task.as_deref();
+            desc = cli.task.as_deref();    
         }
         
         // 如果指定了日期，更新截止日期
@@ -1499,33 +1519,33 @@ fn main() {
             Some(date_str) => match parse_date(date_str) {
                 Ok(date) => Some(date),
                 Err(e) => {
-                    eprintln!("{}", t.error(e));
-                    return;
+                    eprintln!("{}", t.error(e));   
+                    return;      
                 }
-            },
-            None => None,
+            },  
+            None => None,    
         };
         
         // 确保至少有一项要修改
         if desc.is_none() && due_date.is_none() {
-            eprintln!("{}", t.error(&t.provide_content_or_date()));
+            eprintln!("{}", t.error(&t.provide_content_or_date()));   
             return;
         }
-        
+            
         match todo_list.edit_task(&id_str, desc, due_date) {
             Ok(_) => {
                 if desc.is_some() {
                     println!("{}", t.content_updated(&id_str));
                 }
                 if due_date.is_some() {
-                    println!("{}", t.due_date_updated(&id_str));
+                    println!("{}", t.due_date_updated(&id_str));      
                 }
-            },
+            },   
             Err(e) => eprintln!("{}", t.error(e)),
-        }
-        return;
+        }   
+        return;        
     }
-    
+
     // 处理直接修改任务截止日期的命令
     // 格式: jodo -t ID DATE
     if cli.due_date.is_some() && cli.task.is_none() && cli.edit_id.is_none() && cli.command.is_none() {
@@ -1538,21 +1558,21 @@ fn main() {
                     let due_date = match parse_date(date_str) {
                         Ok(date) => Some(date),
                         Err(e) => {
-                            eprintln!("{}", t.error(e));
-                            return;
-                        }
+                            eprintln!("{}", t.error(e));   
+                            return;      
+                        }    
                     };
                     
                     match todo_list.edit_task(&first_arg, None, due_date) {
                         Ok(_) => {
-                            println!("{}", t.due_date_updated(&first_arg));
-                        },
+                            println!("{}", t.due_date_updated(&first_arg));      
+                        },   
                         Err(e) => eprintln!("{}", t.error(e)),
-                    }
-                    return;
-                }
-            }
-        }
+                    }   
+                    return;       
+                }       
+            }       
+        }    
     }
     
     // 处理完成任务
@@ -1561,40 +1581,40 @@ fn main() {
             Ok(ids) => {
                 if ids.len() == 1 {
                     println!("{}", t.task_completed(&ids[0]));
-                } else {
-                    println!("{}", t.tasks_completed(&ids));
+                } else { 
+                    println!("{}", t.tasks_completed(&ids));      
                 }
-            },
+            },   
             Err(e) => eprintln!("{}", t.error(e)),
-        }
-        return;
+        }   
+        return;    
     }
     
     // 处理取消完成任务
     if let Some(id_str) = cli.undo_id {
         match todo_list.mark_undone(&id_str) {
-            Ok(_) => println!("{}", t.task_uncompleted(&id_str)),
+            Ok(_) => println!("{}", t.task_uncompleted(&id_str)),   
             Err(e) => eprintln!("{}", t.error(e)),
-        }
-        return;
+        }   
+        return;    
     }
     
     // 处理标记重要任务
     if let Some(id_str) = cli.star_id {
         match todo_list.star_task(&id_str) {
-            Ok(_) => println!("{}", t.task_starred(&id_str)),
+            Ok(_) => println!("{}", t.task_starred(&id_str)),   
             Err(e) => eprintln!("{}", t.error(e)),
-        }
-        return;
+        }   
+        return;    
     }
     
     // 处理取消重要标记
     if let Some(id_str) = cli.unstar_id {
         match todo_list.unstar_task(&id_str) {
-            Ok(_) => println!("{}", t.task_unstarred(&id_str)),
+            Ok(_) => println!("{}", t.task_unstarred(&id_str)),   
             Err(e) => eprintln!("{}", t.error(e)),
-        }
-        return;
+        }   
+        return;    
     }
     
     // 处理删除任务 (更改为处理多个ID)
@@ -1605,17 +1625,17 @@ fn main() {
                 if ids.len() == 1 {
                     println!("{}", t.task_deleted(&ids[0].to_string()));
                 } else {
-                    // 修复类型错误：正确使用tasks_deleted方法
-                    println!("{}", t.tasks_deleted(&ids));
+                    // 修复类型错误：正确使用tasks_deleted方法   
+                    println!("{}", t.tasks_deleted(&ids));    
                 }
                 
                 // 显示当前任务列表，以便用户看到删除后的结果
-                println!();
+                println!();  
                 todo_list.list_tasks();
-            },
+            },   
             Err(e) => eprintln!("{}", t.error(e)),
-        }
-        return;
+        }   
+        return;    
     }
     
     // 处理显示详细信息
@@ -1623,8 +1643,8 @@ fn main() {
         match todo_list.show_task_detail(&id_str) {
             Ok(_) => {},
             Err(e) => eprintln!("{}", t.error(e)),
-        }
-        return;
+        }   
+        return;    
     }
     
     // 处理批量添加模式
@@ -1640,36 +1660,36 @@ fn main() {
             // 读取用户输入
             line.clear();
             if io::stdin().read_line(&mut line).is_err() {
-                eprintln!("{}", t.error("读取输入失败"));
-                continue;
+                eprintln!("{}", t.error("读取输入失败"));   
+                continue;                
             }
 
             let input = line.trim();
             
             // 检查退出命令
             if input.to_lowercase() == "exit" {
-                break;
+                break;                
             }
 
             // 跳过空行
             if input.is_empty() {
-                continue;
+                continue;                
             }
 
             // 添加任务
             if let Err(e) = todo_list.add_task(input.to_string(), None) {
                 eprintln!("{}", t.error(&e.to_string()));
-            } else {
-                println!("{}", t.task_added(input));
+            } else { 
+                println!("{}", t.task_added(input));       
             }
-        }
-        return;
+        }   
+        return;    
     }
     
     // 处理列出所有任务
     if cli.list || cli.command.is_none() {
-        todo_list.list_tasks();
-        return;
+        todo_list.list_tasks();   
+        return;    
     }
     
     // 处理子命令
@@ -1700,7 +1720,7 @@ fn main() {
                 Some(date_str) => match parse_date(&date_str) {
                     Ok(date) => Some(date),
                     Err(e) => {
-                        eprintln!("{}", t.cmd_error(e));
+                        eprintln!("{}", t.cmd_error(e));   
                         return;
                     }
                 },
@@ -1713,9 +1733,9 @@ fn main() {
                         println!("{}", t.content_updated(&id));
                     }
                     if due_date.is_some() {
-                        println!("{}", t.due_date_updated(&id));
+                        println!("{}", t.due_date_updated(&id));      
                     }
-                },
+                },   
                 Err(e) => eprintln!("{}", t.cmd_error(e)),
             }
         },
@@ -1736,6 +1756,10 @@ fn main() {
                 Ok(_) => {},
                 Err(e) => eprintln!("{}", t.cmd_error(e)),
             }
+        },   
+        Some(Commands::Help) => {       
+            show_help();        
+            return;
         },
         None => {}
     }
