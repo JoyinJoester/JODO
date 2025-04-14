@@ -15,6 +15,12 @@ JODO 是一个轻量级命令行 Todo 应用程序，帮助您高效管理日常
 
 ## 安装
 
+### Windows 安装
+
+1. 前往 [GitHub 发行页面](https://github.com/JoyinJoester/JODO/releases) 下载最新的安装程序 (`jodo-1.2.0-x86_64.msi`)
+2. 双击安装文件并按照安装向导进行操作
+3. 安装完成后，打开命令提示符或 PowerShell，输入 `jodo --version` 验证安装是否成功
+
 ### 从GitHub直接安装
 
 ```bash

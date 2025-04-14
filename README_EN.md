@@ -15,6 +15,12 @@ JODO is a lightweight command-line Todo application that helps you efficiently m
 
 ## Installation
 
+### Windows Installation
+
+1. Go to the [GitHub Releases page](https://github.com/JoyinJoester/JODO/releases) and download the latest installer (`jodo-1.2.0-x86_64.msi`)
+2. Double-click the installation file and follow the installation wizard
+3. After installation, open Command Prompt or PowerShell and type `jodo --version` to verify that the installation was successful
+
 ### Direct Installation from GitHub
 
 ```bash

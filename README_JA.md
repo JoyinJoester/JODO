@@ -15,6 +15,12 @@ JodoはRustで開発されたCommand Line Todo Applicationで、Terminalでのta
 
 ## Install方法
 
+### Windows へのインストール
+
+1. [GitHub リリースページ](https://github.com/JoyinJoester/JODO/releases)から最新のインストーラー (`jodo-1.2.0-x86_64.msi`) をダウンロードします
+2. インストールファイルをダブルクリックして、インストールウィザードに従います
+3. インストール完了後、コマンドプロンプトまたはPowerShellを開き、`jodo --version` と入力してインストールが成功したことを確認します
+
 ### GitHubから直接install
 
 ```bash
