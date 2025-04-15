@@ -1444,9 +1444,16 @@ fn show_version() {
     println!("{} {}", t.version_info(), env!("CARGO_PKG_VERSION"));
     println!("{}", t.app_description());   
     println!("{}: {}", t.author(), env!("CARGO_PKG_AUTHORS"));    
+    
+    // ASCII牛图案
+    println!("\n          (____)    ");
+    println!("          (o o)    ");
+    println!("   /------\\oo/     ");
+    println!("  / |    ||      ");
+    println!(" *  /\\---/\\    ");
+    println!("    ~~   ~~      ");
 }
 
-// 修改main函数，删除不必要的括号
 fn main() {
     // 首先加载配置
     let mut config = Config::load();
