@@ -3,7 +3,8 @@ use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use std::cmp::Ordering;
 
-use chrono::{DateTime, Local, NaiveDate};
+// 添加Datelike trait导入，用于日期操作
+use chrono::{DateTime, Local, NaiveDate, Datelike};
 use clap::{Parser, Subcommand};
 use colored::*;
 use serde::{Deserialize, Serialize};
@@ -1329,16 +1330,71 @@ impl TodoList {
     }    
 }
 
+// 重新实现parse_date函数，修复日期偏移问题
 fn parse_date(date_str: &str) -> Result<DateTime<Local>, &'static str> {
     let t = get_translations();
+    let now = Local::now();
+    
+    // 处理特殊关键字
+    match date_str.to_lowercase().as_str() {
+        "" | "today" | "td" => {
+            // 今天，使用当前日期的00:00:00
+            let today = now.date_naive().and_hms_opt(0, 0, 0)
+                .ok_or(t.invalid_datetime())?;
+            return Ok(DateTime::from_naive_utc_and_offset(today, now.offset().clone()));
+        },
+        "tomorrow" | "tm" => {
+            // 明天，使用当前日期+1天的00:00:00
+            let tomorrow = (now + chrono::Duration::days(1)).date_naive()
+                .and_hms_opt(0, 0, 0).ok_or(t.invalid_datetime())?;
+            return Ok(DateTime::from_naive_utc_and_offset(tomorrow, now.offset().clone()));
+        },
+        _ => {}
+    }
+    
+    // 尝试解析不同格式的日期
+    
+    // 1. 只有一个数字，解释为当月的某一天
+    if let Ok(day) = date_str.parse::<u32>() {
+        if day >= 1 && day <= 31 {
+            let year = now.year();
+            let month = now.month();
+            
+            if let Some(date) = NaiveDate::from_ymd_opt(year, month, day) {
+                let datetime = date.and_hms_opt(0, 0, 0).ok_or(t.invalid_datetime())?;
+                return Ok(DateTime::from_naive_utc_and_offset(datetime, now.offset().clone()));
+            } else {
+                return Err(t.invalid_date_format());
+            }
+        }
+    }
+    
+    // 2. MM-DD格式，解释为当年的某月某日
+    if let Some(pos) = date_str.find('-') {
+        let (month_str, day_str) = date_str.split_at(pos);
+        let day_str = &day_str[1..]; // 去掉'-'
         
+        if let (Ok(month), Ok(day)) = (month_str.parse::<u32>(), day_str.parse::<u32>()) {
+            if month >= 1 && month <= 12 && day >= 1 && day <= 31 {
+                let year = now.year();
+                
+                if let Some(date) = NaiveDate::from_ymd_opt(year, month, day) {
+                    let datetime = date.and_hms_opt(0, 0, 0).ok_or(t.invalid_datetime())?;
+                    return Ok(DateTime::from_naive_utc_and_offset(datetime, now.offset().clone()));
+                }
+            }
+        }
+    }
+    
+    // 3. 标准YYYY-MM-DD格式
     let naive_date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
         .map_err(|_| t.invalid_date_format())?;
     
-    let naive_datetime = naive_date.and_hms_opt(23, 59, 59)
+    // 修改为00:00:00而不是23:59:59，避免时区转换导致日期偏移
+    let naive_datetime = naive_date.and_hms_opt(0, 0, 0)
         .ok_or(t.invalid_datetime())?;
        
-    Ok(DateTime::from_naive_utc_and_offset(naive_datetime, Local::now().offset().clone()))    
+    Ok(DateTime::from_naive_utc_and_offset(naive_datetime, Local::now().offset().clone()))
 }
 
 fn show_help() {
@@ -1390,7 +1446,7 @@ fn show_version() {
     println!("{}: {}", t.author(), env!("CARGO_PKG_AUTHORS"));    
 }
 
-// 修改main函数，更彻底地解决语言切换问题
+// 修改main函数，删除不必要的括号
 fn main() {
     // 首先加载配置
     let mut config = Config::load();
