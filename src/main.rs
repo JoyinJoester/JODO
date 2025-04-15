@@ -1446,7 +1446,7 @@ fn show_version() {
     println!("{}: {}", t.author(), env!("CARGO_PKG_AUTHORS"));    
     
     // ASCII牛图案
-    println!("\n          (____)    ");
+    println!("\n         (_____)    ");
     println!("          (o o)    ");
     println!("   /------\\oo/     ");
     println!("  / |    ||      ");
