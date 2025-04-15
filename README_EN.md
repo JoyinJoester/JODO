@@ -171,6 +171,26 @@ jodo$> Learn Rust programming
 jodo$> exit  # Exit batch mode
 ```
 
+### Batch Operations
+
+```bash
+# Batch edit task due dates (set tasks 5-8 to the 22nd of current month)
+jodo -e 5to8 -t 22
+jodo -e 5-8 -t 22  # Equivalent syntax
+
+# Batch mark tasks as completed
+jodo -c 1-5    # Mark tasks 1 to 5 as completed
+jodo -c 1to5   # Equivalent syntax
+
+# Batch mark tasks as incomplete
+jodo -u 1c-5c    # Mark completed tasks 1c to 5c as incomplete
+jodo -u 1cto5c   # Equivalent syntax
+
+# Batch delete tasks
+jodo -d 1-3    # Delete tasks 1 to 3
+jodo -d 1to3   # Equivalent syntax
+```
+
 ### Other Options
 
 ```bash

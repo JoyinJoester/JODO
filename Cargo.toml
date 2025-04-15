@@ -1,7 +1,7 @@
 [package]
 name = "jodo"
-version = "1.2.0"
-edition = "2021"  # 修改为2021版本，兼容性更好
+version = "1.2.1"
+edition = "2021" 
 description = "一个简单的命令行Todo应用"
 authors = ["Joyin"]
 

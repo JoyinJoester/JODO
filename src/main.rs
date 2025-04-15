@@ -604,6 +604,15 @@ impl Translations {
             Language::Chinese => format!("语言已切换为{}", lang_name),
         }
     }
+
+    fn tasks_uncompleted(&self, ids: &[String]) -> String {
+        let id_list = ids.join(", ");
+        match self.lang {
+            Language::English => format!("Tasks {} marked as incomplete", id_list),
+            Language::Japanese => format!("タスク {} が未完了としてマークされました", id_list),
+            Language::Chinese => format!("任务 {} 已标记为未完成", id_list),
+        }
+    }
 }
 
 // 添加配置结构体
@@ -1328,6 +1337,58 @@ impl TodoList {
     
         Ok(completed_ids)       
     }    
+
+    fn mark_undone_multiple(&mut self, id_strs: &[String]) -> Result<Vec<String>, &'static str> {
+        let t = get_translations();    
+        let mut uncompleted_ids = Vec::new(); 
+    
+        for id_str in id_strs {    
+            let (id, is_completed) = parse_task_id(id_str);
+            
+            // 只处理已完成的任务
+            if !is_completed && id > 0 {
+                continue;
+            }
+    
+            if let Some(task) = self.tasks.iter_mut()
+                .find(|t| !t.deleted && t.completed && t.id == id) {
+                task.completed = false;   
+                uncompleted_ids.push(id_str.clone());       
+            }        
+        }
+    
+        if uncompleted_ids.is_empty() {
+            return Err(t.task_not_completed());
+        }
+            
+        self.reassign_ids(); // 重新分配ID    
+        self.save().map_err(|_| t.save_failed())?;
+    
+        Ok(uncompleted_ids)       
+    }
+
+    // 新增方法：批量编辑任务的截止日期
+    fn edit_tasks_due_date(&mut self, id_strs: &[String], due_date: DateTime<Local>) -> Result<Vec<String>, &'static str> {
+        let t = get_translations();
+        let mut updated_ids = Vec::new();
+
+        for id_str in id_strs {
+            let (id, is_completed) = parse_task_id(id_str);
+            
+            if let Some(task) = self.tasks.iter_mut()
+                .find(|t| !t.deleted && t.completed == is_completed && t.id == id) {
+                task.due_date = Some(due_date);
+                updated_ids.push(id_str.clone());
+            }
+        }
+
+        if updated_ids.is_empty() {
+            return Err(t.task_not_exist());
+        }
+
+        self.save().map_err(|_| t.save_failed())?;
+        Ok(updated_ids)
+    }
 }
 
 // 重新实现parse_date函数，修复日期偏移问题
@@ -1397,6 +1458,67 @@ fn parse_date(date_str: &str) -> Result<DateTime<Local>, &'static str> {
     Ok(DateTime::from_naive_utc_and_offset(naive_datetime, Local::now().offset().clone()))
 }
 
+// 添加日期范围解析函数 - 修改为解析日期序列而不是直接生成日期
+fn parse_date_range(range_str: &str) -> Option<Vec<DateTime<Local>>> {
+    // 检查是否包含"to"关键字
+    if !range_str.contains("to") {
+        return None;
+    }
+    
+    let parts: Vec<&str> = range_str.split("to").collect();
+    if parts.len() != 2 {
+        return None;
+    }
+    
+    let start_str = parts[0].trim();
+    let end_str = parts[1].trim();
+    
+    // 尝试解析开始和结束日期
+    let start_date = match parse_date(start_str) {
+        Ok(date) => date,
+        Err(_) => return None,
+    };
+    
+    let end_date = match parse_date(end_str) {
+        Ok(date) => date,
+        Err(_) => return None,
+    };
+    
+    // 收集日期范围内的所有日期
+    let mut dates = Vec::new();
+    // 修复警告：移除未使用的可变变量
+    let start_date = start_date;
+    
+    // 处理跨年或月份大小问题
+    // 如果结束日期的月份小于开始日期的月份，可能是跨年的情况
+    if end_date.month() < start_date.month() {
+        // 假设是下一年，这仅适用于跨年情况
+        let next_year = start_date.year() + 1;
+        let next_year_date = DateTime::<Local>::from_naive_utc_and_offset(
+            NaiveDate::from_ymd_opt(next_year, end_date.month(), end_date.day())
+                .unwrap_or_else(|| NaiveDate::from_ymd_opt(next_year, end_date.month(), 28).unwrap())
+                .and_hms_opt(0, 0, 0).unwrap(),
+            Local::now().offset().clone()
+        );
+        dates.push(start_date);
+        dates.push(next_year_date);
+        return Some(dates);
+    }
+    
+    // 正常情况：开始日期不大于结束日期
+    if start_date <= end_date {
+        // 添加开始和结束日期
+        dates.push(start_date);
+        if start_date != end_date {
+            dates.push(end_date);
+        }
+        return Some(dates);
+    }
+    
+    // 无效范围
+    return None;
+}
+
 fn show_help() {
     let t = get_translations();
     println!("{}", t.help_title());
@@ -1452,6 +1574,70 @@ fn show_version() {
     println!("  / |    ||      ");
     println!(" *  /\\---/\\    ");
     println!("    ~~   ~~      ");
+}
+
+// 修改解析ID范围的函数，同时支持横线格式和"to"格式
+fn parse_id_range(id_str: &str) -> Vec<String> {
+    // 检查是否包含范围分隔符"-"或"to"
+    if id_str.contains('-') || id_str.contains("to") {
+        // 确定使用的分隔符和分割点
+        let (start_str, end_str) = if id_str.contains('-') {
+            id_str.split_once('-').unwrap()
+        } else {
+            id_str.split_once("to").unwrap()
+        };
+        
+        // 检查是否两端都有"c"后缀，确保一致性
+        let start_has_c = start_str.ends_with('c');
+        let end_has_c = end_str.ends_with('c');
+        
+        // 如果后缀不一致，当作单个ID处理
+        if start_has_c != end_has_c {
+            return vec![id_str.to_string()];
+        }
+        
+        // 解析开始和结束的ID数字
+        let start_num = if start_has_c {
+            start_str[0..start_str.len()-1].parse::<usize>()
+        } else {
+            start_str.parse::<usize>()
+        };
+        
+        let end_num = if end_has_c {
+            end_str[0..end_str.len()-1].parse::<usize>()
+        } else {
+            end_str.parse::<usize>()
+        };
+        
+        // 如果解析成功并且范围有效，生成ID序列
+        if let (Ok(start), Ok(end)) = (start_num, end_num) {
+            if start <= end && end - start <= 100 { // 限制范围大小，防止滥用
+                let mut ids = Vec::new();
+                for id in start..=end {
+                    if start_has_c {
+                        ids.push(format!("{}c", id));
+                    } else {
+                        ids.push(id.to_string());
+                    }
+                }
+                return ids;
+            }
+        }
+    }
+    
+    // 如果不是有效范围，当作单个ID处理
+    vec![id_str.to_string()]
+}
+
+// 扩展ID解析，支持范围
+fn expand_id_ranges(id_strs: &[String]) -> Vec<String> {
+    let mut expanded_ids = Vec::new();
+    
+    for id_str in id_strs {
+        expanded_ids.extend(parse_id_range(id_str));
+    }
+    
+    expanded_ids
 }
 
 fn main() {
@@ -1588,7 +1774,53 @@ fn main() {
 
     // 处理编辑任务
     if let Some(id_str) = cli.edit_id.clone() {
-        // 检查是否误解析为task
+        // 首先检测是否是批量编辑格式（如 "5to8" 或 "5-8"）
+        if id_str.contains("to") || id_str.contains('-') {
+            let parts: Vec<&str>;
+            let delimiter = if id_str.contains("to") { "to" } else { "-" };
+            parts = id_str.split(delimiter).collect();
+            
+            if parts.len() == 2 && 
+               parts[0].parse::<usize>().is_ok() && 
+               parts[1].parse::<usize>().is_ok() {
+                let start: usize = parts[0].parse().unwrap();
+                let end: usize = parts[1].parse().unwrap();
+                if start <= end && end - start <= 100 { // 限制范围大小
+                    let mut ids = Vec::new();
+                    for id in start..=end {
+                        ids.push(id.to_string());
+                    }
+                    
+                    // 处理批量编辑截止日期
+                    if let Some(date_str) = &cli.due_date {
+                        let due_date = match parse_date(date_str) {
+                            Ok(date) => date,
+                            Err(e) => {
+                                eprintln!("{}", t.error(e));
+                                return;
+                            }
+                        };
+                        
+                        match todo_list.edit_tasks_due_date(&ids, due_date) {
+                            Ok(updated_ids) => {
+                                if updated_ids.len() == 1 {
+                                    println!("{}", t.due_date_updated(&updated_ids[0]));
+                                } else {
+                                    println!("已更新任务 {} 的截止日期", updated_ids.join(", "));
+                                }
+                                return;
+                            },
+                            Err(e) => {
+                                eprintln!("{}", t.error(e));
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 标准单任务编辑流程（原有代码）
         let mut desc = cli.edit_content_arg.as_deref().or_else(|| cli.edit_content.as_deref());
         
         // 如果没有编辑内容且task存在，尝试使用task作为编辑内容
@@ -1628,38 +1860,12 @@ fn main() {
         return;        
     }
 
-    // 处理直接修改任务截止日期的命令
-    // 格式: jodo -t ID DATE
-    if cli.due_date.is_some() && cli.task.is_none() && cli.edit_id.is_none() && cli.command.is_none() {
-        // 尝试解析第一个参数为任务ID
-        if let Some(first_arg) = std::env::args().nth(2) {
-            // 检查它是不是-t或--time选项
-            if !first_arg.starts_with('-') {
-                // 获取日期
-                if let Some(date_str) = &cli.due_date {
-                    let due_date = match parse_date(date_str) {
-                        Ok(date) => Some(date),
-                        Err(e) => {
-                            eprintln!("{}", t.error(e));   
-                            return;      
-                        }    
-                    };
-                    
-                    match todo_list.edit_task(&first_arg, None, due_date) {
-                        Ok(_) => {
-                            println!("{}", t.due_date_updated(&first_arg));      
-                        },   
-                        Err(e) => eprintln!("{}", t.error(e)),
-                    }   
-                    return;       
-                }       
-            }       
-        }    
-    }
-    
     // 处理完成任务
     if !cli.complete_ids.is_empty() {
-        match todo_list.mark_done_multiple(&cli.complete_ids) {
+        // 扩展可能的ID范围
+        let expanded_ids = expand_id_ranges(&cli.complete_ids);
+        
+        match todo_list.mark_done_multiple(&expanded_ids) {
             Ok(ids) => {
                 if ids.len() == 1 {
                     println!("{}", t.task_completed(&ids[0]));
@@ -1673,11 +1879,29 @@ fn main() {
     }
     
     // 处理取消完成任务
-    if let Some(id_str) = cli.undo_id {
-        match todo_list.mark_undone(&id_str) {
-            Ok(_) => println!("{}", t.task_uncompleted(&id_str)),   
-            Err(e) => eprintln!("{}", t.error(e)),
-        }   
+    if let Some(id_str) = cli.undo_id.clone() {
+        // 扩展可能的ID范围
+        let expanded_ids = parse_id_range(&id_str);
+        
+        if expanded_ids.len() == 1 {
+            // 单个ID的情况，保持原有行为
+            match todo_list.mark_undone(&id_str) {
+                Ok(_) => println!("{}", t.task_uncompleted(&id_str)),   
+                Err(e) => eprintln!("{}", t.error(e)),
+            }
+        } else {
+            // 多个ID的情况，调用新的批量处理函数
+            match todo_list.mark_undone_multiple(&expanded_ids) {
+                Ok(ids) => {
+                    if ids.len() == 1 {
+                        println!("{}", t.task_uncompleted(&ids[0]));
+                    } else {
+                        println!("{}", t.tasks_uncompleted(&ids));
+                    }
+                },
+                Err(e) => eprintln!("{}", t.error(e)),
+            }
+        }
         return;    
     }
     
@@ -1699,15 +1923,17 @@ fn main() {
         return;    
     }
     
-    // 处理删除任务 (更改为处理多个ID)
+    // 处理删除任务 (更改为处理多个ID和ID范围)
     if !cli.delete_ids.is_empty() {
+        // 扩展可能的ID范围（如"1-5"）
+        let expanded_ids = expand_id_ranges(&cli.delete_ids);
+        
         // 确保用户删除的是他们看到的内容，而不是在ID重新分配后的内容
-        match todo_list.remove_tasks(&cli.delete_ids) {
+        match todo_list.remove_tasks(&expanded_ids) {
             Ok(ids) => {
                 if ids.len() == 1 {
                     println!("{}", t.task_deleted(&ids[0].to_string()));
                 } else {
-                    // 修复类型错误：正确使用tasks_deleted方法   
                     println!("{}", t.tasks_deleted(&ids));    
                 }
                 
@@ -1731,10 +1957,68 @@ fn main() {
     
     // 处理批量添加模式
     if cli.multi_mode {
+        // 检查是否有日期范围参数
+        let mut date_sequence: Option<Vec<DateTime<Local>>> = None;
+        let mut date_index = 0;
+        
+        // 尝试检索-t参数，它可能在args中的不同位置
+        for i in 0..args.len() - 1 {
+            if (args[i] == "-t" || args[i] == "--time") && i + 1 < args.len() {
+                // 尝试解析日期范围
+                if let Some(range) = parse_date_range(&args[i + 1]) {
+                    date_sequence = Some(range);
+                    break;
+                }
+            }
+        }
+        
+        // 进入交互式批量添加模式
         println!("{}", t.multi_mode_start());
+        
+        // 如果有日期序列，显示日期范围提示
+        if let Some(dates) = &date_sequence {
+            if dates.len() >= 2 {
+                let start_date = dates[0].format("%Y-%m-%d").to_string();
+                let end_date = dates[1].format("%Y-%m-%d").to_string();
+                println!("日期范围模式：从 {} 到 {}", start_date, end_date);
+                
+                // 计算任务数量
+                let days_diff = (dates[1] - dates[0]).num_days().abs() as usize + 1;
+                println!("将创建 {} 个任务，每个任务依次对应从开始到结束日期", days_diff);
+            }
+        }
+        
         let mut line = String::new();
         
         loop {
+            // 确认是否已达到日期序列末尾
+            if let Some(dates) = &date_sequence {
+                // 如果是日期范围的第一个和最后一个日期
+                if dates.len() == 2 {
+                    let start_date = dates[0];
+                    let end_date = dates[1];
+                    
+                    // 计算当前应该使用的日期
+                    if date_index > 0 {
+                        // 根据已添加的任务数计算当前日期
+                        if start_date <= end_date {
+                            // 正常顺序
+                            let days_to_add = date_index as i64;
+                            if start_date + chrono::Duration::days(days_to_add) > end_date {
+                                println!("已完成所有指定日期范围内的任务添加");
+                                break;
+                            }
+                        } else {
+                            // 跨年情况
+                            if date_index >= 2 {
+                                println!("已完成所有指定日期范围内的任务添加");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
             // 输出提示符
             print!("{}", t.multi_mode_prompt());
             io::stdout().flush().unwrap();
@@ -1758,11 +2042,48 @@ fn main() {
                 continue;                
             }
 
+            // 确定当前任务的截止日期
+            let due_date = if let Some(dates) = &date_sequence {
+                if dates.len() == 2 {
+                    let start_date = dates[0];
+                    let end_date = dates[1];
+                    
+                    if start_date <= end_date {
+                        // 常规情况：按天递增
+                        let days_to_add = date_index as i64;
+                        Some(start_date + chrono::Duration::days(days_to_add))
+                    } else if date_index == 0 {
+                        // 跨年情况：第一个任务使用开始日期
+                        Some(start_date)
+                    } else if date_index == 1 {
+                        // 跨年情况：第二个任务使用结束日期
+                        Some(end_date)
+                    } else {
+                        None
+                    }
+                } else if !dates.is_empty() {
+                    // 使用指定的单个日期
+                    Some(dates[0])
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            
             // 添加任务
-            if let Err(e) = todo_list.add_task(input.to_string(), None) {
+            if let Err(e) = todo_list.add_task(input.to_string(), due_date) {
                 eprintln!("{}", t.error(&e.to_string()));
             } else { 
-                println!("{}", t.task_added(input));       
+                if let Some(date) = due_date {
+                    let date_str = date.format("%Y-%m-%d").to_string();
+                    println!("{} ({})", t.task_added(input), date_str);
+                } else {
+                    println!("{}", t.task_added(input));
+                }
+                
+                // 增加日期索引
+                date_index += 1;
             }
         }   
         return;    
