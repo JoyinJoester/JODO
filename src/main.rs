@@ -1749,33 +1749,40 @@ fn main() {
     };
     
     // 处理添加新任务
-    if let Some(task_str) = cli.task {
-        let due_date = match &cli.due_date {
-            Some(date_str) => match parse_date(date_str) {
-                Ok(date) => Some(date),
-                Err(e) => {
-                    eprintln!("{}", t.error(e));   
-                    return;      
-                }
-            },  
-            None => None,        
-        };
-    
-        if let Err(e) = todo_list.add_task(task_str.clone(), due_date) {
-            eprintln!("{}", t.error(&e.to_string()));
+    if let Some(ref task_str) = cli.task {
+        // 判断是否为编辑模式
+        if cli.edit_id.is_some() {
+            // 编辑模式下不执行添加任务逻辑
         } else {
-            println!("{}", t.task_added(&task_str));
-            if due_date.is_some() {
-                println!("{}: {}", t.due_date(), cli.due_date.as_ref().unwrap());       
-            }
-        }   
-        return;        
+            // 添加新任务
+            let due_date = match &cli.due_date {
+                Some(date_str) => match parse_date(date_str) {
+                    Ok(date) => Some(date),
+                    Err(e) => {
+                        eprintln!("{}", t.error(e));   
+                        return;      
+                    }
+                },  
+                None => None,        
+            };
+        
+            if let Err(e) = todo_list.add_task(task_str.clone(), due_date) {
+                eprintln!("{}", t.error(&e.to_string()));
+            } else {
+                println!("{}", t.task_added(&task_str));
+                if due_date.is_some() {
+                    println!("{}: {}", t.due_date(), cli.due_date.as_ref().unwrap());       
+                }
+            }   
+            return;        
+        }
     }
 
     // 处理编辑任务
     if let Some(id_str) = cli.edit_id.clone() {
-        // 首先检测是否是批量编辑格式（如 "5to8" 或 "5-8"）
+        // 检测批量编辑格式
         if id_str.contains("to") || id_str.contains('-') {
+            // 解析ID范围
             let parts: Vec<&str>;
             let delimiter = if id_str.contains("to") { "to" } else { "-" };
             parts = id_str.split(delimiter).collect();
@@ -1820,15 +1827,13 @@ fn main() {
             }
         }
 
-        // 标准单任务编辑流程（原有代码）
-        let mut desc = cli.edit_content_arg.as_deref().or_else(|| cli.edit_content.as_deref());
+        // 单任务编辑处理
+        // 按优先级确定编辑内容: 编辑参数 > 主参数 > 内容选项
+        let desc = cli.edit_content_arg.as_deref()
+            .or_else(|| cli.task.as_deref())
+            .or_else(|| cli.edit_content.as_deref());
         
-        // 如果没有编辑内容且task存在，尝试使用task作为编辑内容
-        if desc.is_none() && cli.task.is_some() {
-            desc = cli.task.as_deref();    
-        }
-        
-        // 如果指定了日期，更新截止日期
+        // 解析截止日期
         let due_date = match &cli.due_date {
             Some(date_str) => match parse_date(date_str) {
                 Ok(date) => Some(date),
@@ -1840,12 +1845,13 @@ fn main() {
             None => None,    
         };
         
-        // 确保至少有一项要修改
+        // 验证编辑参数存在
         if desc.is_none() && due_date.is_none() {
             eprintln!("{}", t.error(&t.provide_content_or_date()));   
             return;
         }
             
+        // 执行编辑操作
         match todo_list.edit_task(&id_str, desc, due_date) {
             Ok(_) => {
                 if desc.is_some() {
@@ -1856,7 +1862,7 @@ fn main() {
                 }
             },   
             Err(e) => eprintln!("{}", t.error(e)),
-        }   
+        }
         return;        
     }
 
@@ -2096,7 +2102,7 @@ fn main() {
     }
     
     // 处理子命令
-    match &cli.command {
+    match cli.command {
         Some(Commands::List) => todo_list.list_tasks(),
         Some(Commands::Done { id }) => {
             match todo_list.mark_done(&id) {
