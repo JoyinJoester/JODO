@@ -1,6 +1,6 @@
 # JODO - Simple Command-Line Todo Application
 
-English | [日本語](./README_JA.md) | [简体中文](./README.md)
+English | [日本語](./README_JA.md) | [简体中文](./README_CN.md)
 
 JODO is a lightweight command-line Todo application that helps you efficiently manage your daily tasks.
 
