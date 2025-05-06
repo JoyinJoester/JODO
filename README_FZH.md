@@ -1,6 +1,6 @@
 # JODO - 簡易命令行待辦事項應用
 
-[English] (./README.md)| [日本語](./README_JA.md) | [簡體中文](./README_CN.md)|FakeChiese
+[English](./README.md)| [日本語](./README_JA.md) | [簡體中文](./README_CN.md)|FakeChiese
 
 JODO乃一輕量級命令行待辦事項應用，助君高效管理日常任務。
 
