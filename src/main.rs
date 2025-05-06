@@ -2,17 +2,13 @@ use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use std::cmp::Ordering;
-
-// 添加Datelike trait导入，用于日期操作
 use chrono::{DateTime, Local, NaiveDate, Datelike};
 use clap::{Parser, Subcommand};
 use colored::*;
 use serde::{Deserialize, Serialize};
-
-// 修改Language枚举，添加序列化支持
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 enum Language {
-    Chinese, // 默认语言
+    Chinese, 
     English,
     Japanese,
 }
@@ -22,7 +18,7 @@ impl Language {
         match lang_str.to_lowercase().as_str() {
             "en" | "english" => Language::English,
             "ja" | "jp" | "japanese" => Language::Japanese,
-            _ => Language::Chinese, // 默认为中文
+            _ => Language::Chinese, //默认语言
         }
     }
 }
@@ -37,7 +33,7 @@ impl Translations {
         Self { lang }
     }
 
-    // 保留基本翻译方法
+    // 翻译方法
     fn task_added(&self, task: &str) -> String {
         match self.lang {
             Language::English => format!("Task \"{}\" added", task),
@@ -405,8 +401,6 @@ impl Translations {
             Language::Chinese => "任务视图",
         }.to_string()
     }
-    
-    // 批量模式的翻译保留
     fn multi_mode_start(&self) -> String {
         match self.lang {
             Language::English => "Batch mode (type 'exit' to quit):",
@@ -427,8 +421,6 @@ impl Translations {
             Language::Chinese => format!("任务 {} 已标记为完成", id_list),
         }
     }
-
-    // 添加help信息相关的翻译
     fn add_task(&self) -> String {
         match self.lang {
             Language::English => "Add new task",
@@ -556,8 +548,6 @@ impl Translations {
             Language::Chinese => "视图",
         }.to_string()
     }
-
-    // 添加子命令的翻译
     fn cmd_error(&self, msg: &str) -> String {
         match self.lang {
             Language::English => format!("Error: {}", msg),
@@ -578,8 +568,6 @@ impl Translations {
             Language::Chinese => format!("任务 {} 已删除", id_list),
         }
     }
-
-    // 添加示例文本的翻译
     fn example_task(&self) -> String {
         match self.lang {
             Language::English => "Complete project report",
@@ -595,8 +583,6 @@ impl Translations {
             Language::Chinese => "已修改的任务内容",
         }.to_string()
     }
-
-    // 添加语言切换成功的翻译方法
     fn language_changed(&self, lang_name: &str) -> String {
         match self.lang {
             Language::English => format!("Language switched to {}", lang_name),
@@ -614,8 +600,6 @@ impl Translations {
         }
     }
 }
-
-// 添加配置结构体
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
     language: Language,
@@ -648,8 +632,6 @@ impl Config {
     
     fn save(&self) -> Result<(), io::Error> {
         let config_path = get_config_path();
-        
-        // 确保目录存在
         if let Some(parent) = config_path.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -677,8 +659,6 @@ fn get_translations() -> Translations {
         Translations::new(CURRENT_LANGUAGE)
     }
 }
-
-// 修改 Cli 结构体，使用多语言帮助信息
 fn build_cli() -> Cli {
     Cli {
         task: None,
@@ -822,8 +802,6 @@ enum Commands {
     /// 显示帮助信息
     Help,
 }
-
-// 修改Task结构体，移除group字段
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Task {
     id: usize,
@@ -834,8 +812,6 @@ struct Task {
     starred: bool,    
     deleted: bool,    
 }
-
-// 添加配置结构体
 #[derive(Debug, Serialize, Deserialize)]
 struct TodoList {
     tasks: Vec<Task>,
@@ -976,8 +952,6 @@ impl TodoList {
     
         Ok(todo_list)        
     }
-
-    // 修改add_task方法，移除group参数
     fn add_task(&mut self, description: String, due_date: Option<DateTime<Local>>) -> Result<(), io::Error> {
         let task = Task {
             id: self.next_id, // 临时ID 
@@ -994,7 +968,7 @@ impl TodoList {
         self.save()        
     }
 
-    // 列出任务，移除group参数
+    // 列出任务
     fn list_tasks(&self) {
         let t = get_translations();
     
@@ -1017,7 +991,7 @@ impl TodoList {
             .cloned()        
             .collect();
     
-        // 修改排序逻辑：首先按照星标排序，然后严格按照ID数值排序
+        // 排序逻辑：首先按照星标排序，然后严格按照ID数值排序
         incomplete_tasks.sort_by(|a, b| {
             match (a.starred, b.starred) {
                 (true, false) => Ordering::Less,
@@ -1273,11 +1247,8 @@ impl TodoList {
         self.tasks.iter()   
             .find(|t| !t.deleted && t.completed == is_completed && t.id == id)
     }
-
-    // 重构ID分配逻辑，使用顺序ID而不是递增ID
     fn reassign_ids(&mut self) {
         let mut next_id = 1;
-    
         // 先处理未完成的任务
         let mut incomplete_tasks: Vec<&mut Task> = self.tasks.iter_mut()
             .filter(|task| !task.deleted && !task.completed)        
@@ -1367,7 +1338,7 @@ impl TodoList {
         Ok(uncompleted_ids)       
     }
 
-    // 新增方法：批量编辑任务的截止日期
+    // 方法：批量编辑任务的截止日期
     fn edit_tasks_due_date(&mut self, id_strs: &[String], due_date: DateTime<Local>) -> Result<Vec<String>, &'static str> {
         let t = get_translations();
         let mut updated_ids = Vec::new();
@@ -1390,8 +1361,6 @@ impl TodoList {
         Ok(updated_ids)
     }
 }
-
-// 重新实现parse_date函数，修复日期偏移问题
 fn parse_date(date_str: &str) -> Result<DateTime<Local>, &'static str> {
     let t = get_translations();
     let now = Local::now();
@@ -1567,7 +1536,7 @@ fn show_version() {
     println!("{}", t.app_description());   
     println!("{}: {}", t.author(), env!("CARGO_PKG_AUTHORS"));    
     
-    // ASCII牛图案
+    // ASCII图，当前版本是牛牛
     println!("\n         (_____)    ");
     println!("          (o o)    ");
     println!("   /------\\oo/     ");
@@ -1575,8 +1544,6 @@ fn show_version() {
     println!(" *  /\\---/\\    ");
     println!("    ~~   ~~      ");
 }
-
-// 修改解析ID范围的函数，同时支持横线格式和"to"格式
 fn parse_id_range(id_str: &str) -> Vec<String> {
     // 检查是否包含范围分隔符"-"或"to"
     if id_str.contains('-') || id_str.contains("to") {
