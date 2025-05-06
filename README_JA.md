@@ -1,6 +1,6 @@
 # Jodo - Simple な Command Line Todo Application
 
-[English](./README_EN.md) | 日本語 | [简体中文](./README_CN.md)|[FakeChinese](./README_FZH.md)
+[English](./README.md) | 日本語 | [简体中文](./README_CN.md)|[FakeChinese](./README_FZH.md)
 
 JodoはRustで開発されたCommand Line Todo Applicationで、Terminalでのtask管理を支援します。
 
